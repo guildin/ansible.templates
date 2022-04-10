@@ -1,0 +1,51 @@
+- name: Install lvm2 dependency
+  package:
+    name: lvm2
+    state: present
+
+- name: Check {{ LVM_PV }}
+  stat:
+    path: "{{ LVM_PV }}"
+  register: phys_dev
+
+- name: Create partition
+  when: phys_dev.stat.exists
+  parted:
+    device: "{{ item }}"
+    number: 1
+    flags: [ lvm ]
+    state: present
+  loop: ["{{ LVM_PV }}"] 
+
+- name: task for creating volume group
+  when: phys_dev.stat.exists
+  lvg:
+      vg: "{{ LVM_VG }}"
+      pvs: "{{ LVM_PV }}1"
+
+- name: task for creating logical volume
+  when: phys_dev.stat.exists
+  lvol:
+      vg: "{{ LVM_VG }}"
+      lv: "{{ LVM_LV0 }}"
+      size: "{{ LVM_SIZE }}"
+
+- name: Create directory if does not exist
+  file:
+    path: "{{ lvm_mount_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: format "{{ LVM_FS }}"
+  when: phys_dev.stat.exists
+  filesystem:
+    fstype: "{{ LVM_FS }}"
+    dev: /dev/{{ LVM_VG }}/{{ LVM_LV0 }}
+
+- name: mount the lv
+  when: phys_dev.stat.exists
+  mount:
+    path: "{{ lvm_mount_dir }}"
+    src: /dev/{{ LVM_VG }}/{{ LVM_LV0 }}
+    fstype: "{{ LVM_FS }}"
+    state: mounted

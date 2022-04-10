@@ -1,0 +1,7 @@
+LVM_VG: storage
+LVM_LV0: lvol0
+LVM_PATH: /mnt/ansible_managed
+LVM_FS: ext4
+### Must be mandatory!
+#LVM_PV: /dev/vdb
+#LVM_SIZE: +100%FREE
