@@ -1,0 +1,21 @@
+---
+- name: Install firewalld
+  when: ansible_os_family == "RedHat"
+  yum:
+    name: "{{ packages }}"
+    state: latest
+    update_cache: "yes"
+  vars:
+    packages:
+    - firewalld
+  tags:
+    - utils.install
+
+- name: Firewalld start (enable {{ firewalld_enabled }} )
+  when: ansible_os_family == "RedHat"
+  systemd:
+    name: firewalld
+    state: started
+    enabled: "{{ firewalld_enabled }}"
+  tags:
+    - firewalld
