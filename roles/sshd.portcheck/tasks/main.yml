@@ -1,0 +1,68 @@
+---
+- name: Set port custom value
+  set_fact:
+    ANSIBLE_PORT_TO_BE: "{{ ansible_port }}"
+  when: ansible_port != "22"
+  tags:
+    - sshd
+    - sshd.portcheck
+
+
+- name: "Check custom port {{ ansible_port }}"
+  when: ansible_port != "22"
+  wait_for:
+    port: "{{ ansible_port }}"
+    state: "started"
+    host: "{{ ansible_host }}"
+    connect_timeout: "5"
+    timeout: "5"
+  delegate_to: "localhost"
+  ignore_errors: "yes"
+  register: ssh_port
+  tags:
+    - sshd
+    - sshd.portcheck
+
+- name: "Check port 22"
+  when: ssh_port.failed
+  delegate_to: "localhost"
+  wait_for:
+    port: 22
+    state: "started"
+    host: "{{ ansible_host }}"
+    connect_timeout: "5"
+    timeout: "5"
+  ignore_errors: "yes"
+  register: ssh_port_default
+  
+  tags:
+    - sshd
+    - sshd.portcheck
+
+- name: check
+  debug:
+    var: ANSIBLE_PORT_TO_BE
+  tags:
+    - sshd
+    - sshd.portcheck
+
+- name: Set SSH port to 22
+  set_fact:
+    ansible_port: "22"
+  when: ssh_port_default.state is defined
+  tags:
+    - sshd
+    - sshd.portcheck
+
+- name: "Check port {{ ansible_port }}"
+  wait_for:
+    port: "{{ ansible_port }}"
+    state: "started"
+    host: "{{ ansible_host }}"
+    connect_timeout: "5"
+    timeout: "5"
+  delegate_to: "localhost"
+  ignore_errors: "yes"
+  tags:
+    - sshd
+    - sshd.portcheck

@@ -1,0 +1,157 @@
+---
+- name: Check if already configured
+  stat:
+    path: /etc/ssh/.ansible_configured
+  register: already_configured
+  tags:
+    - ssh.keys
+
+- name: Create lock file, if it doesnt exist already
+  file:
+    path: /etc/ssh/.ansible_configured
+    state: touch
+  when: not already_configured.stat.exists
+  tags:
+    - ssh.keys
+
+- name: Copy CA file
+  copy:
+    src: "{{ role_path }}/files/{{ ssh_ca_hosts_key }}"
+    dest: "/etc/ssh/{{ ssh_ca_hosts_key }}"
+    mode: 0600
+    owner: root
+    group: root
+    backup: no
+  tags:
+    - ssh.keys
+    - ssh.keys.hostkeyca
+
+- name: remove default keys
+  when: not already_configured.stat.exists
+  file:
+    state: absent
+    path: "/etc/ssh/{{ item }}"
+  loop:
+    - ssh_host_rsa_key
+    - ssh_host_ecdsa_key
+    - ssh_host_ed25519_key
+    - ssh_host_rsa_key.pub
+    - ssh_host_ecdsa_key.pub
+    - ssh_host_ed25519_key.pub
+    - ssh_host_rsa_key-cert.pub
+    - ssh_host_ecdsa_key-cert.pub
+    - ssh_host_ed25519_key-cert.pub
+  tags:
+    - ssh.keys
+
+- name: Copy create-host-certs.sh
+  when: not already_configured.stat.exists
+  template:
+    src: "create-host-certs.sh.j2"
+    dest: "/etc/ssh/create-host-certs.sh"
+    mode: 0754
+    owner: root
+    group: root
+    backup: no
+  tags:
+    - ssh.keys
+
+- name: Generate host ssh-keys
+  when: not already_configured.stat.exists
+  shell: /etc/ssh/create-host-certs.sh {{ ansible_host }} {{ ansible_user }} {{ SSH_KEY_PATH }}
+  tags:
+    - ssh.keys
+
+- name: remove default keys
+  when: not already_configured.stat.exists
+  file:
+    state: absent
+    path: "{{ item }}"
+  loop:
+    - /etc/ssh/{{ ssh_ca_hosts_key }}
+  tags:
+    - ssh.keys
+
+- name: Set SSH_ALLOW_GROUP to sudo (Debian)
+  set_fact:
+    SSH_ALLOW_GROUP: "sudo"
+  when:
+    - ansible_os_family == "Debian"
+  tags:
+    - sshd
+    - sshd_provision
+
+- name: Set SSH_ALLOW_GROUP to wheel (RedHat)
+  set_fact:
+    SSH_ALLOW_GROUP: "wheel"
+  when:
+    - ansible_os_family == "RedHat"
+  tags:
+    - sshd
+    - sshd_provision
+
+- name: Enable ssh port firewalld
+  firewalld:
+    zone: public
+    port: "{{ ANSIBLE_PORT_TO_BE }}/tcp"
+    permanent: yes
+    state: enabled
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_port == "22"
+  tags:
+    - sshd
+    - sshd_provision
+  notify: Reload firewalld
+
+- name: Copy ssh_CA_users_key.pub
+  copy:
+    src: ssh_CA_users_key.pub
+    dest: "{{ SSH_KEY_PATH }}/ssh_CA_users_key.pub"
+    owner: "root"
+    group: "root"
+    mode: 0400
+  notify: Restart sshd
+  tags:
+    - sshd_provision
+
+- name: Set SSH_ALLOW_GROUP for Debian
+  set_fact:
+    SSH_ALLOW_GROUP: "sudo"
+  when: ansible_os_family == "Debian"
+  tags:
+    - sshd_provision
+
+- name: Set SSH_ALLOW_GROUP for RedHat
+  set_fact:
+    SSH_ALLOW_GROUP: "wheel"
+  when: ansible_os_family == "RedHat"
+  tags:
+    - sshd_provision
+
+- name: Sshd config
+  template:
+    src: "sshd_config.j2"
+    dest: "{{ SSH_KEY_PATH }}/sshd_config"
+    owner: "root"
+    group: "root"
+    mode: 0644
+  notify: Restart sshd
+  tags:
+    - sshd
+    - sshd_provision
+
+- name: Disable sshd service firewalld
+  firewalld:
+    zone: public
+    service: ssh
+    permanent: yes
+    state: disabled
+  when: 
+    - ansible_os_family == "RedHat"
+    - ansible_port != "22"
+  tags:
+    - sshd
+    - sshd_provision
+  notify: Reload firewalld
+    

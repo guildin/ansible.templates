@@ -1,0 +1,4 @@
+SSH_KEY_PATH: "/etc/ssh"
+SSH_TCP_PORT: 22
+SSH_ALLOW_USER: "privileged"
+ssh_ca_hosts_key: my_sshca_hosts

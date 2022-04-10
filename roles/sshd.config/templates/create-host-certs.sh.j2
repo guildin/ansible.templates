@@ -1,0 +1,32 @@
+#!/bin/bash
+set +x
+
+
+FQDN=$1
+serverKeyId=$2
+cert_path=$3
+CAHostKey=${4:-'/etc/ssh/{{ ssh_ca_hosts_key }}'}
+
+
+[ -z "$FQDN" ] || [ -z "$serverKeyId" ] && echo -e "Check required arguments: <serverFQDN> and  <server>" && exit 1
+
+echo FQDN=$FQDN
+echo serverKeyId=$serverKeyId
+echo CAHostKey=$CAHostKey
+pwd
+
+mkdir -p $cert_path
+
+ssh-keygen -t rsa -b 4096 -h -N "" -C "$FQDN ssh host key" -f $cert_path/ssh_host_rsa_key
+ssh-keygen -t ecdsa -h -N "" -C "$FQDN ssh host key" -f $cert_path/ssh_host_ecdsa_key
+ssh-keygen -t ed25519 -h -N "" -C "$FQDN ssh host key" -f $cert_path/ssh_host_ed25519_key
+
+ssh-keygen -s $CAHostKey -I $serverKeyId -h -n $FQDN $cert_path/ssh_host_rsa_key.pub
+ssh-keygen -s $CAHostKey -I $serverKeyId -h -n $FQDN $cert_path/ssh_host_ecdsa_key.pub
+ssh-keygen -s $CAHostKey -I $serverKeyId -h -n $FQDN $cert_path/ssh_host_ed25519_key.pub
+
+ssh-keygen -L -f $cert_path/ssh_host_rsa_key-cert.pub
+ssh-keygen -L -f $cert_path/ssh_host_ecdsa_key-cert.pub
+ssh-keygen -L -f $cert_path/ssh_host_ed25519_key-cert.pub
+
+chmod 400 $cert_path/ssh_host*

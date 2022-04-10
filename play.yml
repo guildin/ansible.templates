@@ -1,0 +1,11 @@
+- hosts: all
+  gather_facts: no
+  roles:
+   - sshd.portcheck
+
+- hosts: common
+  become: yes
+  become_method: sudo
+  gather_facts: yes
+  roles:
+   - sshd.config

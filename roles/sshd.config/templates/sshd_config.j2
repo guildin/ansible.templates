@@ -1,0 +1,58 @@
+Port {{ ANSIBLE_PORT_TO_BE | default('22') }}
+
+AllowUsers {{ SSH_ALLOW_USER }}
+AllowGroups {{ SSH_ALLOW_GROUP }}
+
+LogLevel INFO
+
+SyslogFacility AUTH
+
+AcceptEnv LC_* LANG
+
+AddressFamily inet
+ListenAddress 0.0.0.0
+TCPKeepAlive yes
+UseDNS no
+Protocol 2
+
+AllowAgentForwarding no
+AllowTcpForwarding no
+X11Forwarding no
+
+PermitRootLogin no
+PermitEmptyPasswords no
+PermitTunnel no
+PermitUserEnvironment no
+UsePAM yes
+
+AuthorizedKeysFile .ssh/authorizedKeys
+TrustedUserCAKeys /etc/ssh/ssh_CA_users_key.pub
+
+Banner none
+PrintLastLog yes
+PrintMotd no
+
+ClientAliveCountMax 4
+ClientAliveInterval 10
+Compression yes
+LoginGraceTime 60
+MaxAuthTries 3
+MaxSessions 8
+MaxStartups 4
+StrictModes yes
+RekeyLimit 512M 1h
+
+ChallengeResponseAuthentication no
+GSSAPIAuthentication no
+HostbasedAuthentication no
+KerberosAuthentication no
+PasswordAuthentication no
+PubkeyAuthentication yes
+
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+
+HostKey /etc/ssh/ssh_host_rsa_key
+HostCertificate /etc/ssh/ssh_host_rsa_key-cert.pub
+
+Subsystem sftp /usr/libexec/openssh/sftp-server
