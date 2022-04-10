@@ -1,0 +1,43 @@
+---
+- name: Install ca-certificates (rhel)
+  yum:
+    name: ca-certificates
+    state: present
+  when: ansible_os_family == "RedHat"
+  tags:
+    - ca
+
+- name: Install ca-certificates (debian)
+  apt:
+    name: ca-certificates
+    state: present
+    update_cache: yes
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - ca
+
+- name: Copy CA certificate to trusted ca path of the os {{ ansible_os_family }}
+  when: ansible_os_family == "Debian"
+  copy:
+    src: '{{ ca_certfile }}'
+    dest: '/usr/local/share/ca-certificates/{{ ca_certfile }}'
+    owner: root
+    group: root
+    mode: 0600
+  notify:
+    - update trusted ca debian
+  tags:
+    - ca
+
+- name: copy certificate authority to trusted ca path of the os {{ ansible_os_family }}
+  when: ansible_os_family == "RedHat"
+  copy:
+    src: '{{ ca_certfile }}'
+    dest: '/etc/pki/ca-trust/source/anchors/{{ ca_certfile }}'
+    owner: root
+    group: root
+    mode: 0600
+  notify:
+    - update trusted ca redhat
+  tags:
+    - ca
